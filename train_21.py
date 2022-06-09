@@ -11,15 +11,15 @@ import os
 
 FLAGS = easydict.EasyDict({"img_size": 384,
 
-                           "train_txt_path": "/yuhwan/yuhwan/Dataset/Segmentation/Crop_weed/datasets_IJRR2017/train.txt",
+                           "train_txt_path": "/yuhwan/yuhwan/Dataset/Segmentation/BoniRob/train.txt",
 
-                           "val_txt_path": "/yuhwan/yuhwan/Dataset/Segmentation/Crop_weed/datasets_IJRR2017/val.txt",
+                           "val_txt_path": "/yuhwan/yuhwan/Dataset/Segmentation/BoniRob/val.txt",
 
-                           "test_txt_path": "/yuhwan/yuhwan/Dataset/Segmentation/Crop_weed/datasets_IJRR2017/test.txt",
+                           "test_txt_path": "/yuhwan/yuhwan/Dataset/Segmentation/BoniRob/test.txt",
                            
-                           "label_path": "/yuhwan/yuhwan/Dataset/Segmentation/Crop_weed/datasets_IJRR2017/raw_aug_gray_mask/",
+                           "label_path": "/yuhwan/yuhwan/Dataset/Segmentation/BoniRob/raw_aug_gray_mask/",
                            
-                           "image_path": "/yuhwan/yuhwan/Dataset/Segmentation/Crop_weed/datasets_IJRR2017/restored_low_light_DSLR/",
+                           "image_path": "/yuhwan/yuhwan/Dataset/Segmentation/BoniRob/raw_aug_rgb_img/",
                            
                            "pre_checkpoint": False,
                            
@@ -37,11 +37,11 @@ FLAGS = easydict.EasyDict({"img_size": 384,
 
                            "batch_size": 4,
 
-                           "sample_images": "/yuhwan/yuhwan/checkpoint/Segmenation/MTS_CNN_related/BoniRob_v1_DSLR/sample_images",
+                           "sample_images": "/yuhwan/Edisk/yuhwan/Edisk/Segmentation/6th_paper/proposed_method/Apple_A/sample_images",
 
-                           "save_checkpoint": "/yuhwan/yuhwan/checkpoint/Segmenation/MTS_CNN_related/BoniRob_v1_DSLR/checkpoint",
+                           "save_checkpoint": "/yuhwan/Edisk/yuhwan/Edisk/Segmentation/6th_paper/proposed_method/Apple_A/checkpoint",
 
-                           "save_print": "/yuhwan/yuhwan/checkpoint/Segmenation/MTS_CNN_related/BoniRob_v1_DSLR/train_out.txt",
+                           "save_print": "/yuhwan/Edisk/yuhwan/Edisk/Segmentation/6th_paper/proposed_method/Apple_A/train_out.txt",
 
                            "train_loss_graphs": "/yuwhan/Edisk/yuwhan/Edisk/Segmentation/V2/BoniRob/train_loss.txt",
 
@@ -125,7 +125,7 @@ def test_func2(image_list, label_list):
 
     return img, temp_img, lab
 
-@tf.function
+# @tf.function
 def run_model(model, images, training=True):
     return model(images, training=training)
 
@@ -290,9 +290,11 @@ def cal_loss(model, images, labels, class_imbal_labels_buf, objectiness, object_
         batch_labels = tf.reshape(labels, [-1,])
         object_logits, crop_logits, weed_logits = run_model(model, images, True)
         object_logits = tf.reshape(object_logits, [-1,])
-        crop_logits = tf.reshape(crop_logits, [-1,])
-        weed_logits = tf.reshape(weed_logits, [-1,])
-        crop_weed_logits = tf.concat([crop_logits[:, tf.newaxis], weed_logits[:, tf.newaxis]], -1)
+        # crop_logits = tf.reshape(crop_logits, [FLAGS.batch_size, -1,])
+        # weed_logits = tf.reshape(weed_logits, [FLAGS.batch_size, -1,])
+        # crop_weed_logits = tf.concat([crop_logits[:, :, tf.newaxis], weed_logits[:, :, tf.newaxis]], -1)
+        crop_weed_logits = tf.concat([crop_logits, weed_logits], -1)
+        objectiness = tf.reshape(objectiness, [-1,])
         
         obejct_loss = focal_tversky(objectiness, tf.nn.sigmoid(object_logits), alpha=object_buf[1])
 
@@ -300,40 +302,58 @@ def cal_loss(model, images, labels, class_imbal_labels_buf, objectiness, object_
         non_background_labels = tf.gather(batch_labels, non_background_indices)
         non_background_labels = tf.cast(non_background_labels, tf.int32)
         non_background_labels = tf.one_hot(non_background_labels, 2)
+        crop_weed_logit = tf.reshape(crop_weed_logits, [-1, 2])
+        crop_weed_logit = tf.gather(crop_weed_logit, non_background_indices)
 
-        crop_weed_bin = [np.bincount(np.reshape(labels[i].numpy(), [-1,]), minlength=2) for i in range(FLAGS.batch_size)]
+        if class_imbal_labels_buf[0] < class_imbal_labels_buf[1]:
+            crop_weed_loss = categorical_focal_loss(alpha=[[weed_buf[0], weed_buf[1]]])(non_background_labels, tf.nn.softmax(crop_weed_logit, -1))
+        else:
+            crop_weed_loss = categorical_focal_loss(alpha=[[crop_buf[0], crop_buf[1]]])(non_background_labels, tf.nn.softmax(crop_weed_logit, -1))
+
+
+        crop_weed_bin = [np.bincount(np.reshape(labels[i], [-1,]), minlength=2) for i in range(FLAGS.batch_size)]
 
         crop_loss = []
         weed_loss = []
-        crop_weed_loss = []
+
         for i in range(FLAGS.batch_size):
             if crop_weed_bin[i][0] != 0 and crop_weed_bin[i][1] != 0:
-                crop_logit = crop_logits[i]
-                weed_logit = weed_logits[i]
-                crop_weed_logit = crop_weed_logits[i]
-                non_background_label = non_background_labels[i]
-                if class_imbal_labels_buf[0] < class_imbal_labels_buf[1]:
-                    crop_weed_loss.append(categorical_focal_loss(alpha=[[weed_buf[0], weed_buf[1]]])(non_background_label, tf.nn.softmax(crop_weed_logit, -1)))
-                else:
-                    crop_weed_loss.append(categorical_focal_loss(alpha=[[crop_buf[0], crop_buf[1]]])(non_background_label, tf.nn.softmax(crop_weed_logit, -1)))
+                crop_weed_logit = tf.reshape(crop_weed_logits[i], [-1, 2])
+                non_background_labels = tf.reshape(labels[i], [-1,])
+                non_background_indices = tf.squeeze(tf.where(tf.not_equal(non_background_labels, 2)), -1)
+                non_background_labels = tf.gather(non_background_labels, non_background_indices)
+                non_background_label = tf.one_hot(non_background_labels, 2)
+                crop_weed_logit = tf.gather(crop_weed_logit, non_background_indices)
 
                 crop_loss.append(focal_tversky(non_background_label[:, 0], tf.nn.softmax(crop_weed_logit, -1)[:, 0], alpha=crop_buf[1]))
 
                 weed_loss.append(focal_tversky(non_background_label[:, 1], tf.nn.softmax(crop_weed_logit, -1)[:, 1], alpha=weed_buf[1]))
 
             if crop_weed_bin[i][0] != 0 and crop_weed_bin[i][1] == 0:
+                crop_weed_logit = tf.reshape(crop_weed_logits[i], [-1, 2])
+                non_background_labels = tf.reshape(labels[i], [-1,])
+                non_background_indices = tf.squeeze(tf.where(tf.not_equal(non_background_labels, 2)), -1)
+                non_background_labels = tf.gather(non_background_labels, non_background_indices)
+                non_background_label = tf.one_hot(non_background_labels, 2)
+                crop_weed_logit = tf.gather(crop_weed_logit, non_background_indices)
+
                 crop_loss.append(focal_tversky(non_background_label[:, 0], tf.nn.softmax(crop_weed_logit, -1)[:, 0], alpha=crop_buf[1]))
 
             if crop_weed_bin[i][0] == 0 and crop_weed_bin[i][1] != 0:
+                crop_weed_logit = tf.reshape(crop_weed_logits[i], [-1, 2])
+                non_background_labels = tf.reshape(labels[i], [-1,])
+                non_background_indices = tf.squeeze(tf.where(tf.not_equal(non_background_labels, 2)), -1)
+                non_background_labels = tf.gather(non_background_labels, non_background_indices)
+                non_background_label = tf.one_hot(non_background_labels, 2)
+                crop_weed_logit = tf.gather(crop_weed_logit, non_background_indices)
+                
                 weed_loss.append(focal_tversky(non_background_label[:, 1], tf.nn.softmax(crop_weed_logit, -1)[:, 1], alpha=weed_buf[1]))
 
-        crop_weed_loss = tf.convert_to_tensor(crop_weed_loss, tf.float32)
         crop_loss = tf.convert_to_tensor(crop_loss, tf.float32)
         weed_loss = tf.convert_to_tensor(weed_loss, tf.float32)
 
-        crop_weed_loss = tf.reduce_mean(crop_weed_loss)
-        crop_loss = tf.reduce_mean(crop_loss)
-        weed_loss = tf.reduce_mean(weed_loss)
+        crop_loss = tf.reduce_sum(crop_loss)
+        weed_loss = tf.reduce_sum(weed_loss)
 
         total_loss = obejct_loss + crop_weed_loss + weed_loss + crop_loss
 
@@ -449,10 +469,10 @@ def main():
                         object_image = object_output[i, :, :, 0]
                         crop_image = crop_output[i]
                         weed_image = weed_output[i]
-                        crop_weed_image = tf.concat([crop_image, weed_image])
+                        crop_weed_image = tf.concat([crop_image, weed_image], -1)
                         crop_weed_image = tf.nn.softmax(crop_weed_image, -1)
                         crop_weed_image = tf.argmax(crop_weed_image, -1)
-                        crop_weed_image = tf.cast(crop_weed_image, tf.int32)
+                        crop_weed_image = tf.cast(crop_weed_image, tf.int32).numpy()
 
                         object_image = tf.where(object_image >= 0.5, 1, 0).numpy()
                         background_indices = np.where(object_image == 0)
@@ -495,10 +515,10 @@ def main():
                     object_image = object_output[0, :, :, 0]
                     crop_image = crop_output[0]
                     weed_image = weed_output[0]
-                    crop_weed_image = tf.concat([crop_image, weed_image])
+                    crop_weed_image = tf.concat([crop_image, weed_image], -1)
                     crop_weed_image = tf.nn.softmax(crop_weed_image, -1)
                     crop_weed_image = tf.argmax(crop_weed_image, -1)
-                    crop_weed_image = tf.cast(crop_weed_image, tf.int32)
+                    crop_weed_image = tf.cast(crop_weed_image, tf.int32).numpy()
 
                     object_image = tf.where(object_image >= 0.5, 1, 0).numpy()
                     background_indices = np.where(object_image == 0)
@@ -567,10 +587,10 @@ def main():
                     object_image = object_output[0, :, :, 0]
                     crop_image = crop_output[0]
                     weed_image = weed_output[0]
-                    crop_weed_image = tf.concat([crop_image, weed_image])
+                    crop_weed_image = tf.concat([crop_image, weed_image], -1)
                     crop_weed_image = tf.nn.softmax(crop_weed_image, -1)
                     crop_weed_image = tf.argmax(crop_weed_image, -1)
-                    crop_weed_image = tf.cast(crop_weed_image, tf.int32)
+                    crop_weed_image = tf.cast(crop_weed_image, tf.int32).numpy()
 
                     object_image = tf.where(object_image >= 0.5, 1, 0).numpy()
                     background_indices = np.where(object_image == 0)
@@ -635,10 +655,10 @@ def main():
                     object_image = object_output[0, :, :, 0]
                     crop_image = crop_output[0]
                     weed_image = weed_output[0]
-                    crop_weed_image = tf.concat([crop_image, weed_image])
+                    crop_weed_image = tf.concat([crop_image, weed_image], -1)
                     crop_weed_image = tf.nn.softmax(crop_weed_image, -1)
                     crop_weed_image = tf.argmax(crop_weed_image, -1)
-                    crop_weed_image = tf.cast(crop_weed_image, tf.int32)
+                    crop_weed_image = tf.cast(crop_weed_image, tf.int32).numpy()
 
                     object_image = tf.where(object_image >= 0.5, 1, 0).numpy()
                     background_indices = np.where(object_image == 0)
