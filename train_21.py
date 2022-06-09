@@ -346,7 +346,7 @@ def cal_loss(model, images, labels, class_imbal_labels_buf, objectiness, object_
                 non_background_labels = tf.gather(non_background_labels, non_background_indices)
                 non_background_label = tf.one_hot(non_background_labels, 2)
                 crop_weed_logit = tf.gather(crop_weed_logit, non_background_indices)
-                
+
                 weed_loss.append(focal_tversky(non_background_label[:, 1], tf.nn.softmax(crop_weed_logit, -1)[:, 1], alpha=weed_buf[1]))
 
         crop_loss = tf.convert_to_tensor(crop_loss, tf.float32)
@@ -713,7 +713,7 @@ def main():
             if not os.path.isdir(model_dir):
                 print("Make {} folder to store the weight!".format(epoch))
                 os.makedirs(model_dir)
-            ckpt = tf.train.Checkpoint(model=model, model2=model2, optim=optim, optim2=optim2)
+            ckpt = tf.train.Checkpoint(model=model, optim=optim)
             ckpt_dir = model_dir + "/Crop_weed_model_{}.ckpt".format(epoch)
             ckpt.save(ckpt_dir)
     else:
