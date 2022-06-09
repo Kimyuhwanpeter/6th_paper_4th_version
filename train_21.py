@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 from model_21 import *
-from PFB_measurement_related import Measurement
+from PFB_measurement import Measurement
 from random import shuffle, random
 from tensorflow.keras import backend as K
 
