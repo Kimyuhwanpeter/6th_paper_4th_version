@@ -347,7 +347,9 @@ def main():
     tf.keras.backend.clear_session()
 
     model = three_decoder_Unet(input_shape=(FLAGS.img_size, FLAGS.img_size, 3), nclasses=1)
+    prob = model_profiler(model, FLAGS.batch_size)
     model.summary()
+    print(prob)
 
     if FLAGS.pre_checkpoint:
         ckpt = tf.train.Checkpoint(model=model, optim=optim)
