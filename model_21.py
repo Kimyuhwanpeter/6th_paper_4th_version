@@ -283,8 +283,6 @@ def three_decoder_Unet(input_shape=(384, 384, 3), nclasses=1):
     h_1 = tf.keras.layers.ReLU()(h_1)
     h_1 = h_1_att + h_1
     h_1 = tf.keras.layers.Conv2D(filters=nclasses, kernel_size=1)(h_1)
-    h_1 = tf.keras.layers.BatchNormalization()(h_1)
-    h_1 = tf.keras.layers.ReLU()(h_1)
 
     h_2 = tf.keras.layers.Conv2DTranspose(filters=32, kernel_size=2, strides=2)(h_2)
     h_2 = tf.keras.layers.BatchNormalization()(h_2)
@@ -296,8 +294,6 @@ def three_decoder_Unet(input_shape=(384, 384, 3), nclasses=1):
     h_2 = tf.keras.layers.ReLU()(h_2)
     h_2 = h_2_att + h_2
     h_2 = tf.keras.layers.Conv2D(filters=nclasses, kernel_size=1)(h_2)
-    h_2 = tf.keras.layers.BatchNormalization()(h_2)
-    h_2 = tf.keras.layers.ReLU()(h_2)
 
     h_3 = tf.keras.layers.Conv2DTranspose(filters=32, kernel_size=2, strides=2)(h_3)
     h_3 = tf.keras.layers.BatchNormalization()(h_3)
@@ -309,7 +305,10 @@ def three_decoder_Unet(input_shape=(384, 384, 3), nclasses=1):
     h_3 = tf.keras.layers.ReLU()(h_3)
     h_3 = h_3_att + h_3
     h_3 = tf.keras.layers.Conv2D(filters=nclasses, kernel_size=1)(h_3)
-    h_3 = tf.keras.layers.BatchNormalization()(h_3)
-    h_3 = tf.keras.layers.ReLU()(h_3)
 
     return tf.keras.Model(inputs=inputs, outputs=[h_1, h_2, h_3])
+
+mo = three_decoder_Unet()
+prob = model_profiler(mo, 4)
+mo.summary()
+print(prob)
