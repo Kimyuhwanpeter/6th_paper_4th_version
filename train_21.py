@@ -56,7 +56,7 @@ FLAGS = easydict.EasyDict({"img_size": 384,
                            "train": True})
 
 
-optim = tf.keras.optimizers.Adam(FLAGS.lr)
+optim = tf.keras.optimizers.Adam(FLAGS.lr, beta_1=0.5)
 color_map = np.array([[255, 0, 0], [0, 0, 255], [0,0,0]], dtype=np.uint8)
 
 def tr_func(image_list, label_list):
@@ -111,7 +111,7 @@ def test_func(image_list, label_list):
 def test_func2(image_list, label_list):
 
     img = tf.io.read_file(image_list)
-    img = tf.image.decode_jpeg(img, 3)
+    img = tf.image.decode_png(img, 3)
     img = tf.image.resize(img, [FLAGS.img_size, FLAGS.img_size])
     img = tf.clip_by_value(img, 0, 255)
     temp_img = img
@@ -462,8 +462,8 @@ def main():
 
                     object_logits, crop_logits, weed_logits = run_model(model, batch_images, False)
                     object_output = tf.nn.sigmoid(object_logits)
-                    crop_output = tf.nn.sigmoid(crop_logits)
-                    weed_output = tf.nn.sigmoid(weed_logits)
+                    crop_output = crop_logits
+                    weed_output = weed_logits
                     for i in range(FLAGS.batch_size):
                         label = tf.cast(batch_labels[i], tf.int32).numpy()
                         object_image = object_output[i, :, :, 0]
@@ -510,8 +510,8 @@ def main():
                     batch_image = tf.expand_dims(batch_images[j], 0)
                     object_logits, crop_logits, weed_logits = run_model(model, batch_image, False)
                     object_output = tf.nn.sigmoid(object_logits)
-                    crop_output = tf.nn.sigmoid(crop_logits)
-                    weed_output = tf.nn.sigmoid(weed_logits)
+                    crop_output = crop_logits
+                    weed_output = weed_logits
                     object_image = object_output[0, :, :, 0]
                     crop_image = crop_output[0]
                     weed_image = weed_output[0]
@@ -582,8 +582,8 @@ def main():
                     batch_image = tf.expand_dims(batch_images[j], 0)
                     object_logits, crop_logits, weed_logits = run_model(model, batch_image, False)
                     object_output = tf.nn.sigmoid(object_logits)
-                    crop_output = tf.nn.sigmoid(crop_logits)
-                    weed_output = tf.nn.sigmoid(weed_logits)
+                    crop_output = crop_logits
+                    weed_output = weed_logits
                     object_image = object_output[0, :, :, 0]
                     crop_image = crop_output[0]
                     weed_image = weed_output[0]
@@ -650,8 +650,8 @@ def main():
                     batch_image = tf.expand_dims(batch_images[j], 0)
                     object_logits, crop_logits, weed_logits = run_model(model, batch_image, False)
                     object_output = tf.nn.sigmoid(object_logits)
-                    crop_output = tf.nn.sigmoid(crop_logits)
-                    weed_output = tf.nn.sigmoid(weed_logits)
+                    crop_output = crop_logits
+                    weed_output = weed_logits
                     object_image = object_output[0, :, :, 0]
                     crop_image = crop_output[0]
                     weed_image = weed_output[0]
