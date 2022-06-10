@@ -131,7 +131,7 @@ def run_model(model, images, training=True):
 
 def true_dice_loss(y_true, y_pred):
     y_true = tf.cast(y_true, tf.float32)
-    y_pred = tf.math.sigmoid(y_pred)
+    # y_pred = tf.math.sigmoid(y_pred)
     numerator = 2 * tf.reduce_sum(y_true * y_pred)
     denominator = tf.reduce_sum(y_true + y_pred)
 
@@ -296,7 +296,7 @@ def cal_loss(model, images, labels, class_imbal_labels_buf, objectiness, object_
         crop_weed_logits = tf.concat([crop_logits, weed_logits], -1)
         objectiness = tf.reshape(objectiness, [-1,])
         
-        obejct_loss = focal_tversky(objectiness, tf.nn.sigmoid(object_logits), alpha=object_buf[1])
+        obejct_loss = true_dice_loss(objectiness, tf.nn.sigmoid(object_logits))
 
         non_background_indices = tf.squeeze(tf.where(tf.not_equal(batch_labels, 2)), -1)
         non_background_labels = tf.gather(batch_labels, non_background_indices)
@@ -325,9 +325,9 @@ def cal_loss(model, images, labels, class_imbal_labels_buf, objectiness, object_
                 non_background_label = tf.one_hot(non_background_labels, 2)
                 crop_weed_logit = tf.gather(crop_weed_logit, non_background_indices)
 
-                crop_loss.append(focal_tversky(non_background_label[:, 0], tf.nn.softmax(crop_weed_logit, -1)[:, 0], alpha=crop_buf[1]))
+                crop_loss.append(true_dice_loss(non_background_label[:, 0], tf.nn.softmax(crop_weed_logit, -1)[:, 0]))
 
-                weed_loss.append(focal_tversky(non_background_label[:, 1], tf.nn.softmax(crop_weed_logit, -1)[:, 1], alpha=weed_buf[1]))
+                weed_loss.append(true_dice_loss(non_background_label[:, 1], tf.nn.softmax(crop_weed_logit, -1)[:, 1]))
 
             if crop_weed_bin[i][0] != 0 and crop_weed_bin[i][1] == 0:
                 crop_weed_logit = tf.reshape(crop_weed_logits[i], [-1, 2])
@@ -337,7 +337,7 @@ def cal_loss(model, images, labels, class_imbal_labels_buf, objectiness, object_
                 non_background_label = tf.one_hot(non_background_labels, 2)
                 crop_weed_logit = tf.gather(crop_weed_logit, non_background_indices)
 
-                crop_loss.append(focal_tversky(non_background_label[:, 0], tf.nn.softmax(crop_weed_logit, -1)[:, 0], alpha=crop_buf[1]))
+                crop_loss.append(true_dice_loss(non_background_label[:, 0], tf.nn.softmax(crop_weed_logit, -1)[:, 0]))
 
             if crop_weed_bin[i][0] == 0 and crop_weed_bin[i][1] != 0:
                 crop_weed_logit = tf.reshape(crop_weed_logits[i], [-1, 2])
@@ -347,15 +347,15 @@ def cal_loss(model, images, labels, class_imbal_labels_buf, objectiness, object_
                 non_background_label = tf.one_hot(non_background_labels, 2)
                 crop_weed_logit = tf.gather(crop_weed_logit, non_background_indices)
 
-                weed_loss.append(focal_tversky(non_background_label[:, 1], tf.nn.softmax(crop_weed_logit, -1)[:, 1], alpha=weed_buf[1]))
+                weed_loss.append(true_dice_loss(non_background_label[:, 1], tf.nn.softmax(crop_weed_logit, -1)[:, 1]))
 
         crop_loss = tf.convert_to_tensor(crop_loss, tf.float32)
         weed_loss = tf.convert_to_tensor(weed_loss, tf.float32)
 
-        crop_loss = tf.reduce_sum(crop_loss)
-        weed_loss = tf.reduce_sum(weed_loss)
+        crop_loss = tf.reduce_mean(crop_loss)
+        weed_loss = tf.reduce_mean(weed_loss)
 
-        total_loss = obejct_loss + crop_weed_loss + weed_loss + crop_loss
+        total_loss = obejct_loss + crop_weed_loss + weed_loss + crop_loss # change to dice!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     grads = tape.gradient(total_loss, model.trainable_variables)
     optim.apply_gradients(zip(grads, model.trainable_variables))
