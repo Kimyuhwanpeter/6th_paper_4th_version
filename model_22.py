@@ -315,4 +315,3 @@ def modified_Unet_PP(input_shape=(384, 384, 3), nclasses=1):
     h_3_output = tf.keras.layers.Conv2D(filters=nclasses, kernel_size=1)(h_2_2)
 
     return tf.keras.Model(inputs=inputs, outputs=[h_1_output, h_2_output, h_3_output])
-
