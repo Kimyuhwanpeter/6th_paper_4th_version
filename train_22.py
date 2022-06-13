@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 from model_22 import *
-from PFB_measurement import Measurement
+from PFB_measurement_related import Measurement
 from random import shuffle, random
 from tensorflow.keras import backend as K
 
@@ -11,19 +11,19 @@ import os
 
 FLAGS = easydict.EasyDict({"img_size": 384,
 
-                           "train_txt_path": "/yuhwan/yuhwan/Dataset/Segmentation/BoniRob/train.txt",
+                           "train_txt_path": "/yuhwan/yuhwan/Dataset/Segmentation/Crop_weed/datasets_IJRR2017/train.txt",
 
-                           "val_txt_path": "/yuhwan/yuhwan/Dataset/Segmentation/BoniRob/val.txt",
+                           "val_txt_path": "/yuhwan/yuhwan/Dataset/Segmentation/Crop_weed/datasets_IJRR2017/val.txt",
 
-                           "test_txt_path": "/yuhwan/yuhwan/Dataset/Segmentation/BoniRob/test.txt",
+                           "test_txt_path": "/yuhwan/yuhwan/Dataset/Segmentation/Crop_weed/datasets_IJRR2017/test.txt",
                            
-                           "label_path": "/yuhwan/yuhwan/Dataset/Segmentation/BoniRob/raw_aug_gray_mask/",
+                           "label_path": "/yuhwan/yuhwan/Dataset/Segmentation/Crop_weed/datasets_IJRR2017/raw_aug_gray_mask/",
                            
-                           "image_path": "/yuhwan/yuhwan/Dataset/Segmentation/BoniRob/raw_aug_rgb_img/",
+                           "image_path": "/yuhwan/yuhwan/Dataset/Segmentation/Crop_weed/datasets_IJRR2017/raw_aug_rgb_img/",
                            
-                           "pre_checkpoint": False,
+                           "pre_checkpoint": True,
                            
-                           "pre_checkpoint_path": "/yuhwan/yuhwan/checkpoint/Segmenation/MTS_CNN_related/CWFID_v1/checkpoint/270",
+                           "pre_checkpoint_path": "/yuhwan/yuhwan/checkpoint/Segmenation/6th_paper/Apple_A/checkpoint/399",
                            
                            "lr": 0.0001,
 
@@ -37,11 +37,11 @@ FLAGS = easydict.EasyDict({"img_size": 384,
 
                            "batch_size": 4,
 
-                           "sample_images": "/yuhwan/Edisk/yuhwan/Edisk/Segmentation/6th_paper/proposed_method/Apple_A/sample_images",
+                           "sample_images": "/yuhwan/yuhwan/checkpoint/Segmenation/6th_paper/Apple_A/sample_images",
 
-                           "save_checkpoint": "/yuhwan/Edisk/yuhwan/Edisk/Segmentation/6th_paper/proposed_method/Apple_A/checkpoint",
+                           "save_checkpoint": "/yuhwan/yuhwan/checkpoint/Segmenation/6th_paper/Apple_A/checkpoint",
 
-                           "save_print": "/yuhwan/Edisk/yuhwan/Edisk/Segmentation/6th_paper/proposed_method/Apple_A/train_out.txt",
+                           "save_print": "/yuhwan/yuhwan/checkpoint/Segmenation/6th_paper/Apple_A/train_out.txt",
 
                            "train_loss_graphs": "/yuwhan/Edisk/yuwhan/Edisk/Segmentation/V2/BoniRob/train_loss.txt",
 
